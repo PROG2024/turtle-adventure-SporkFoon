@@ -295,10 +295,6 @@ class DemoEnemy(Enemy):
         if not (self.size <= self.y <= self.game.screen_height - self.size):
             self.velocity_y = -self.velocity_y
 
-    def render(self):
-        # Update the position of the rectangle on the canvas to the new position of the enemy
-        self.game.canvas.move(self.canvas_item, self.velocity_x, self.velocity_y)
-
     def delete(self):
         # Remove the rectangle from the canvas
         self.game.canvas.delete(self.canvas_item)
@@ -480,7 +476,34 @@ class StealthEnemy(Enemy):
     def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
         super().__init__(game, size, color)
         self.visible = True
+        self.visibility_timer = 0
+        self.visibility_duration = 100  # How long to stay in one visibility state
+        self.visibility_cooldown = 50
 
     def update(self):
-        self.x += random.choice([-1, 1]) * 5
-        self.y += random.choice([-1, 1]) * 5
+        # StealthEnemy might randomly disappear or reappear
+        self.visibility_timer += 1
+
+        if self.visible and self.visibility_timer > self.visibility_duration:
+            self.visible = False
+            self.visibility_timer = 0 
+
+        elif not self.visible and self.visibility_timer > self.visibility_cooldown:
+            self.visible = True
+            self.visibility_timer = 0
+
+        if self.visible:
+            self.x += random.choice([-1, 0, 1])
+            self.y += random.choice([-1, 0, 1])
+
+    def render(self):
+        if self.canvas_item:
+            self.game.canvas.coords(
+                self.canvas_item,
+                self.x - self.size, self.y - self.size,
+                self.x + self.size, self.y + self.size
+            )
+            self.game.canvas.itemconfig(
+                self.canvas_item,
+                state='normal' if self.visible else 'hidden'
+            )
