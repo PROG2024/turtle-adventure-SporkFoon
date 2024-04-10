@@ -210,7 +210,7 @@ class Enemy(TurtleGameElement):
         super().__init__(game)
         self.size = size
         self.color = color
-        self.shape = shape  # Allows different shapes for different enemies
+        self.shape = shape
         self.canvas_item = None
 
     def create(self):
@@ -265,8 +265,8 @@ class DemoEnemy(Enemy):
                  size: int,
                  color: str):
         super().__init__(game, size, color)
-        self.size = 20  # Example size
-        self.color = 'red'  # Example color
+        self.size = 20
+        self.color = 'red'
         # Start at a random position in the game area
         self.x = random.randint(self.size, 800 - self.size)
         self.y = random.randint(self.size, 500 - self.size)
@@ -277,7 +277,6 @@ class DemoEnemy(Enemy):
         self.canvas_item = None
 
     def create(self):
-        # Create a visual representation on the canvas, for example a rectangle
         self.canvas_item = self.game.canvas.create_rectangle(
             self.x - self.size, self.y - self.size,
             self.x + self.size, self.y + self.size,
@@ -327,7 +326,7 @@ class EnemyGenerator:
 
     def __init__(self, game: "TurtleAdventureGame", level: int):
         self.game = game
-        self._level = level  # Directly use an attribute with underscore
+        self._level = level
         self.schedule_enemy_creation()
 
     @property
@@ -348,7 +347,7 @@ class EnemyGenerator:
         """
         Schedules the creation of enemies based on the current game level.
         """
-        interval = max(1000 - (self.level * 100), 300)  # Adjust interval based on level
+        interval = max(1000 - (self.level * 100), 300)
         self.game.after(interval, self.create_enemy)
 
     def create_enemy(self):
@@ -362,9 +361,9 @@ class EnemyGenerator:
         else:
             enemy = StealthEnemy(self.game, size=20, color='green')
         
-        enemy.create()  # Ensure the enemy is created and displayed
-        self.game.add_enemy(enemy)  # Adds the enemy to the game's list of elements
-        self.schedule_enemy_creation()  # Continue scheduling new enemies
+        enemy.create()
+        self.game.add_enemy(enemy)
+        self.schedule_enemy_creation()
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -439,49 +438,21 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
         Update and render all game's elements. Overrides the animate method
         from the Game class to include collision detection.
         """
-        super().animate()  # Ensure that the basic animation logic is still performed
+        super().animate()
 
-        # Check for collisions between the player and each enemy
         for enemy in self.enemies:
             if enemy.hits_player():
                 self.game_over_lose()
-                break  # Stop checking after finding a collision
+                break
 
 class RandomWalkEnemy(Enemy):
     def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
         super().__init__(game, size, color)
-        # Initialize additional attributes if necessary
         self.canvas_item = None
 
-    def create(self):
-        """Create a visual representation of the enemy on the game's canvas."""
-        self.canvas_item = self.game.canvas.create_oval(
-            self.x - self.size, self.y - self.size,
-            self.x + self.size, self.y + self.size,
-            fill=self.color
-        )
-
     def update(self):
-        """Update the enemy's position."""
-        # Implement logic for random walking
         self.x += random.choice([-5, 5])
         self.y += random.choice([-5, 5])
-        # Ensure the enemy stays within game boundaries or add additional logic
-
-    def render(self):
-        """Re-draw the enemy with its updated position on the canvas."""
-        if self.canvas_item is not None:
-            self.game.canvas.coords(
-                self.canvas_item,
-                self.x - self.size, self.y - self.size,
-                self.x + self.size, self.y + self.size
-            )
-
-    def delete(self):
-        """Remove the enemy's visual representation from the canvas."""
-        if self.canvas_item is not None:
-            self.game.canvas.delete(self.canvas_item)
-            self.canvas_item = None
 
 class ChasingEnemy(Enemy):
     def update(self):
@@ -508,10 +479,8 @@ class StealthEnemy(Enemy):
         self.visible = True
 
     def update(self):
-        # Example update logic. Adjust as needed for your game.
         self.x += random.choice([-1, 1]) * 5
         self.y += random.choice([-1, 1]) * 5
-        # Toggle visibility or add other logic for the stealth behavior
 
     def render(self):
         if self.canvas_item:
