@@ -296,13 +296,13 @@ class DemoEnemy(Enemy):
         self.game.canvas.delete(self.canvas_item)
 
     def hits_player(self):
-        # Determine if the enemy has collided with the player
-        player = self.game.player  # Assuming player is a game attribute
-        player_pos = self.game.canvas.coords(player.canvas_item)
-        enemy_pos = self.game.canvas.coords(self.canvas_item)
-        # Check for overlap
-        return (enemy_pos[2] > player_pos[0] and enemy_pos[0] < player_pos[2] and
-                enemy_pos[3] > player_pos[1] and enemy_pos[1] < player_pos[3])
+        """
+        Check whether the enemy is hitting the player.
+        Assumes both player and enemy are circular for simplicity.
+        """
+        player = self.game.player
+        distance = ((self.x - player.x) ** 2 + (self.y - player.y) ** 2) ** 0.5
+        return distance < (self.size + player.size) / 2
 
 
 # TODO
@@ -319,43 +319,46 @@ class EnemyGenerator:
     kinds and scheduling them to appear at certain points in time.
     """
 
-    def __init__(self, game, level):
+    def __init__(self, game: "TurtleAdventureGame", level: int):
         self.game = game
-        self.level = level
-        # Schedule enemy creation
+        self._level = level  # Directly use an attribute with underscore
         self.schedule_enemy_creation()
-
-    @property
-    def game(self) -> "TurtleAdventureGame":
-        return self.__game
-
-    @game.setter
-    def game(self, value: "TurtleAdventureGame") -> None:
-        self.__game = value
 
     @property
     def level(self) -> int:
         """
-        Get the game level
+        Get the game level.
         """
-        return self.__level
+        return self._level
+
+    @level.setter
+    def level(self, value: int):
+        """
+        Set the game level.
+        """
+        self._level = value
 
     def schedule_enemy_creation(self):
-        # Depending on the level, create enemies at different intervals
-        interval = max(1000 - (self.level * 100), 100)  # Interval decreases as level goes up
+        """
+        Schedules the creation of enemies based on the current game level.
+        """
+        interval = max(1000 - (self.level * 100), 300)  # Adjust interval based on level
         self.game.after(interval, self.create_enemy)
 
     def create_enemy(self):
-        # Create different types of enemies based on the level
+        """
+        Creates an enemy and adds it to the game. The type of enemy can be based on the level.
+        """
         if self.level < 5:
-            enemy = RandomWalkEnemy(self.game)
+            enemy = RandomWalkEnemy(self.game, size=20, color='red')
         elif self.level < 10:
-            enemy = ChasingEnemy(self.game)
+            enemy = ChasingEnemy(self.game, size=20, color='blue')
         else:
-            enemy = StealthEnemy(self.game)
-        enemy.create()
-        self.game.add_element(enemy)
-        self.schedule_enemy_creation()
+            enemy = StealthEnemy(self.game, size=20, color='green')
+        
+        enemy.create()  # Ensure the enemy is created and displayed
+        self.game.add_enemy(enemy)  # Adds the enemy to the game's list of elements
+        self.schedule_enemy_creation()  # Continue scheduling new enemies
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -389,7 +392,7 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
         self.add_element(self.player)
         self.canvas.bind("<Button-1>", lambda e: self.waypoint.activate(e.x, e.y))
 
-        self.enemy_generator = EnemyGenerator(self, level=self.level)
+        self.enemy_generator = EnemyGenerator(self, self.level)
 
         self.player.x = 50
         self.player.y = self.screen_height//2
@@ -426,13 +429,40 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                                 fill="red")
 
 class RandomWalkEnemy(Enemy):
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        # Initialize additional attributes if necessary
+        self.canvas_item = None
+
+    def create(self):
+        """Create a visual representation of the enemy on the game's canvas."""
+        self.canvas_item = self.game.canvas.create_oval(
+            self.x - self.size, self.y - self.size,
+            self.x + self.size, self.y + self.size,
+            fill=self.color
+        )
+
     def update(self):
-        # Randomly change the direction at each update or continue in the same direction
-        self.x += random.choice([-1, 0, 1])
-        self.y += random.choice([-1, 0, 1])
-        # Call game_over_lose if this enemy hits the player
-        if self.hits_player():
-            self.game.game_over_lose()
+        """Update the enemy's position."""
+        # Implement logic for random walking
+        self.x += random.choice([-5, 5])
+        self.y += random.choice([-5, 5])
+        # Ensure the enemy stays within game boundaries or add additional logic
+
+    def render(self):
+        """Re-draw the enemy with its updated position on the canvas."""
+        if self.canvas_item is not None:
+            self.game.canvas.coords(
+                self.canvas_item,
+                self.x - self.size, self.y - self.size,
+                self.x + self.size, self.y + self.size
+            )
+
+    def delete(self):
+        """Remove the enemy's visual representation from the canvas."""
+        if self.canvas_item is not None:
+            self.game.canvas.delete(self.canvas_item)
+            self.canvas_item = None
 
 class ChasingEnemy(Enemy):
     def update(self):
