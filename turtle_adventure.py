@@ -213,6 +213,9 @@ class Enemy(TurtleGameElement):
         self.shape = shape
         self.canvas_item = None
 
+        self.x = random.randint(self.size, self.game.screen_width - self.size)
+        self.y = random.randint(self.size, self.game.screen_height - self.size)
+
     def create(self):
         if self.shape == "oval":
             self.canvas_item = self.game.canvas.create_oval(
@@ -268,8 +271,8 @@ class DemoEnemy(Enemy):
         self.size = 20
         self.color = 'red'
         # Start at a random position in the game area
-        self.x = random.randint(self.size, 800 - self.size)
-        self.y = random.randint(self.size, 500 - self.size)
+        self.x = random.randint(self.size, self.game.screen_width - self.size)
+        self.y = random.randint(self.size, self.game.screen_height - self.size)
         # Move at a constant velocity
         self.velocity_x = random.choice([-1, 1]) * 5
         self.velocity_y = random.choice([-1, 1]) * 5
@@ -287,9 +290,9 @@ class DemoEnemy(Enemy):
         self.x += self.velocity_x
         self.y += self.velocity_y
         # Reverse direction if it hits the boundaries of the game area
-        if not (self.size <= self.x <= 800 - self.size):
+        if not (self.size <= self.x <= self.game.screen_width - self.size):
             self.velocity_x = -self.velocity_x
-        if not (self.size <= self.y <= 500 - self.size):
+        if not (self.size <= self.y <= self.game.screen_height - self.size):
             self.velocity_y = -self.velocity_y
 
     def render(self):
@@ -481,15 +484,3 @@ class StealthEnemy(Enemy):
     def update(self):
         self.x += random.choice([-1, 1]) * 5
         self.y += random.choice([-1, 1]) * 5
-
-    def render(self):
-        if self.canvas_item:
-            self.game.canvas.coords(
-                self.canvas_item,
-                self.x - self.size, self.y - self.size,
-                self.x + self.size, self.y + self.size
-            )
-            self.game.canvas.itemconfig(
-                self.canvas_item,
-                state="normal" if self.visible else "hidden"
-            )
