@@ -478,46 +478,126 @@ class RandomWalkEnemy(Enemy):
             self.canvas_item = None
 
 class ChasingEnemy(Enemy):
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        self.canvas_item = None
+
+    def create(self):
+        """Create a visual representation of the enemy on the game's canvas."""
+        self.canvas_item = self.game.canvas.create_oval(
+            self.x - self.size, self.y - self.size,
+            self.x + self.size, self.y + self.size,
+            fill=self.color
+        )
+
     def update(self):
-        # Chase the player at a slow speed
+        """Update the enemy's position to chase the player."""
         player = self.game.player
         dx = player.x - self.x
         dy = player.y - self.y
         distance = (dx ** 2 + dy ** 2) ** 0.5
         if distance > 0:
-            self.x += dx / distance * 0.5
+            self.x += dx / distance * 0.5  # Adjust speed as needed
             self.y += dy / distance * 0.5
-        # Call game_over_lose if this enemy hits the player
-        if self.hits_player():
-            self.game.game_over_lose()
+
+    def render(self):
+        """Re-draw the enemy with its updated position on the canvas."""
+        if self.canvas_item is not None:
+            self.game.canvas.coords(
+                self.canvas_item,
+                self.x - self.size, self.y - self.size,
+                self.x + self.size, self.y + self.size
+            )
+
+    def delete(self):
+        """Remove the enemy's visual representation from the canvas."""
+        if self.canvas_item is not None:
+            self.game.canvas.delete(self.canvas_item)
+            self.canvas_item = None
+
+    def hits_player(self):
+        """Check whether the enemy is hitting the player."""
+        # This can be the same as the parent Enemy class, if already defined there
+        return super().hits_player()
+
 
 class FencingEnemy(Enemy):
-    # Assume the home has a square area, and the enemy moves around it
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        self.canvas_item = None
+
+    def create(self):
+        self.canvas_item = self.game.canvas.create_rectangle(
+            self.x - self.size, self.y - self.size,
+            self.x + self.size, self.y + self.size,
+            outline=self.color, width=2
+        )
+
     def update(self):
-        home = self.game.home
-        if self.x < home.x - home.size:
-            self.x += 1
-        elif self.x > home.x + home.size:
-            self.x -= 1
-        
-        if self.y < home.y - home.size:
-            self.y += 1
-        elif self.y > home.y + home.size:
-            self.y -= 1
-        
-        # Call game_over_lose if this enemy hits the player
-        if self.hits_player():
-            self.game.game_over_lose()
+        # Custom logic to move in a square pattern around the home
+        # This is a simplified placeholder logic
+        self.x += random.choice([-5, 5])
+        self.y += random.choice([-5, 5])
+
+    def render(self):
+        if self.canvas_item is not None:
+            self.game.canvas.coords(
+                self.canvas_item,
+                self.x - self.size, self.y - self.size,
+                self.x + self.size, self.y + self.size
+            )
+
+    def delete(self):
+        if self.canvas_item is not None:
+            self.game.canvas.delete(self.canvas_item)
+            self.canvas_item = None
+
+    def hits_player(self):
+        # Check collision with the player
+        return super().hits_player()
+
 
 class StealthEnemy(Enemy):
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        self.visible = True  # Additional attribute to control visibility
+        self.canvas_item = None  # Handle to the canvas item for this enemy
+
+    def create(self):
+        # Create a visual representation of the enemy. This example uses an oval.
+        self.canvas_item = self.game.canvas.create_oval(
+            self.x - self.size, self.y - self.size,
+            self.x + self.size, self.y + self.size,
+            fill=self.color, state="normal" if self.visible else "hidden"
+        )
+
     def update(self):
-        # StealthEnemy might randomly disappear or reappear
-        if random.random() < 0.1:
-            self.visible = not self.visible
-        # Move randomly when visible
-        if self.visible:
-            self.x += random.choice([-1, 0, 1])
-            self.y += random.choice([-1, 0, 1])
-        # Call game_over_lose if this enemy hits the player
-        if self.visible and self.hits_player():
-            self.game.game_over_lose()
+        # Example update logic. Adjust as needed for your game.
+        self.x += random.choice([-1, 1]) * 5
+        self.y += random.choice([-1, 1]) * 5
+        # Toggle visibility or add other logic for the stealth behavior
+
+    def render(self):
+        # Update the position of the enemy on the canvas and handle visibility
+        if self.canvas_item:
+            self.game.canvas.coords(
+                self.canvas_item,
+                self.x - self.size, self.y - self.size,
+                self.x + self.size, self.y + self.size
+            )
+            self.game.canvas.itemconfig(
+                self.canvas_item,
+                state="normal" if self.visible else "hidden"
+            )
+
+    def delete(self):
+        # Remove the enemy's representation from the canvas
+        if self.canvas_item:
+            self.game.canvas.delete(self.canvas_item)
+            self.canvas_item = None
+
+    def hits_player(self):
+        # Implement collision detection with the player, considering visibility
+        if not self.visible:
+            return False  # Invisible enemies don't hit the player
+        return super().hits_player()
