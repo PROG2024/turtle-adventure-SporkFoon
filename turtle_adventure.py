@@ -428,6 +428,19 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                                 font=font,
                                 fill="red")
 
+    def animate(self):
+        """
+        Update and render all game's elements. Overrides the animate method
+        from the Game class to include collision detection.
+        """
+        super().animate()  # Ensure that the basic animation logic is still performed
+
+        # Check for collisions between the player and each enemy
+        for enemy in self.enemies:
+            if enemy.hits_player():
+                self.game_over_lose()
+                break  # Stop checking after finding a collision
+
 class RandomWalkEnemy(Enemy):
     def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
         super().__init__(game, size, color)
