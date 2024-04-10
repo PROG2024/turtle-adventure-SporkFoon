@@ -4,6 +4,7 @@ adventure game.
 """
 from turtle import RawTurtle
 from gamelib import Game, GameElement
+import random
 
 
 class TurtleGameElement(GameElement):
@@ -258,18 +259,50 @@ class DemoEnemy(Enemy):
                  size: int,
                  color: str):
         super().__init__(game, size, color)
+        self.size = 20  # Example size
+        self.color = 'red'  # Example color
+        # Start at a random position in the game area
+        self.x = random.randint(self.size, 800 - self.size)
+        self.y = random.randint(self.size, 500 - self.size)
+        # Move at a constant velocity
+        self.velocity_x = random.choice([-1, 1]) * 5
+        self.velocity_y = random.choice([-1, 1]) * 5
+        # The canvas object for this enemy, to be created in the create method
+        self.canvas_item = None
 
-    def create(self) -> None:
-        pass
+    def create(self):
+        # Create a visual representation on the canvas, for example a rectangle
+        self.canvas_item = self.game.canvas.create_rectangle(
+            self.x - self.size, self.y - self.size,
+            self.x + self.size, self.y + self.size,
+            fill=self.color)
 
-    def update(self) -> None:
-        pass
+    def update(self):
+        # Update the enemy's position based on its velocity
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+        # Reverse direction if it hits the boundaries of the game area
+        if not (self.size <= self.x <= 800 - self.size):
+            self.velocity_x = -self.velocity_x
+        if not (self.size <= self.y <= 500 - self.size):
+            self.velocity_y = -self.velocity_y
 
-    def render(self) -> None:
-        pass
+    def render(self):
+        # Update the position of the rectangle on the canvas to the new position of the enemy
+        self.game.canvas.move(self.canvas_item, self.velocity_x, self.velocity_y)
 
-    def delete(self) -> None:
-        pass
+    def delete(self):
+        # Remove the rectangle from the canvas
+        self.game.canvas.delete(self.canvas_item)
+
+    def hits_player(self):
+        # Determine if the enemy has collided with the player
+        player = self.game.player  # Assuming player is a game attribute
+        player_pos = self.game.canvas.coords(player.canvas_item)
+        enemy_pos = self.game.canvas.coords(self.canvas_item)
+        # Check for overlap
+        return (enemy_pos[2] > player_pos[0] and enemy_pos[0] < player_pos[2] and
+                enemy_pos[3] > player_pos[1] and enemy_pos[1] < player_pos[3])
 
 
 # TODO
@@ -286,19 +319,19 @@ class EnemyGenerator:
     kinds and scheduling them to appear at certain points in time.
     """
 
-    def __init__(self, game: "TurtleAdventureGame", level: int):
-        self.__game: TurtleAdventureGame = game
-        self.__level: int = level
-
-        # example
-        self.__game.after(100, self.create_enemy)
+    def __init__(self, game, level):
+        self.game = game
+        self.level = level
+        # Schedule enemy creation
+        self.schedule_enemy_creation()
 
     @property
     def game(self) -> "TurtleAdventureGame":
-        """
-        Get reference to the associated TurtleAnvengerGame instance
-        """
         return self.__game
+
+    @game.setter
+    def game(self, value: "TurtleAdventureGame") -> None:
+        self.__game = value
 
     @property
     def level(self) -> int:
@@ -307,14 +340,22 @@ class EnemyGenerator:
         """
         return self.__level
 
-    def create_enemy(self) -> None:
-        """
-        Create a new enemy, possibly based on the game level
-        """
-        new_enemy = DemoEnemy(self.__game, 20, "red")
-        new_enemy.x = 100
-        new_enemy.y = 100
-        self.game.add_element(new_enemy)
+    def schedule_enemy_creation(self):
+        # Depending on the level, create enemies at different intervals
+        interval = max(1000 - (self.level * 100), 100)  # Interval decreases as level goes up
+        self.game.after(interval, self.create_enemy)
+
+    def create_enemy(self):
+        # Create different types of enemies based on the level
+        if self.level < 5:
+            enemy = RandomWalkEnemy(self.game)
+        elif self.level < 10:
+            enemy = ChasingEnemy(self.game)
+        else:
+            enemy = StealthEnemy(self.game)
+        enemy.create()
+        self.game.add_element(enemy)
+        self.schedule_enemy_creation()
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -383,3 +424,57 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                                 text="You Lose",
                                 font=font,
                                 fill="red")
+
+class RandomWalkEnemy(Enemy):
+    def update(self):
+        # Randomly change the direction at each update or continue in the same direction
+        self.x += random.choice([-1, 0, 1])
+        self.y += random.choice([-1, 0, 1])
+        # Call game_over_lose if this enemy hits the player
+        if self.hits_player():
+            self.game.game_over_lose()
+
+class ChasingEnemy(Enemy):
+    def update(self):
+        # Chase the player at a slow speed
+        player = self.game.player
+        dx = player.x - self.x
+        dy = player.y - self.y
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+        if distance > 0:
+            self.x += dx / distance * 0.5
+            self.y += dy / distance * 0.5
+        # Call game_over_lose if this enemy hits the player
+        if self.hits_player():
+            self.game.game_over_lose()
+
+class FencingEnemy(Enemy):
+    # Assume the home has a square area, and the enemy moves around it
+    def update(self):
+        home = self.game.home
+        if self.x < home.x - home.size:
+            self.x += 1
+        elif self.x > home.x + home.size:
+            self.x -= 1
+        
+        if self.y < home.y - home.size:
+            self.y += 1
+        elif self.y > home.y + home.size:
+            self.y -= 1
+        
+        # Call game_over_lose if this enemy hits the player
+        if self.hits_player():
+            self.game.game_over_lose()
+
+class StealthEnemy(Enemy):
+    def update(self):
+        # StealthEnemy might randomly disappear or reappear
+        if random.random() < 0.1:
+            self.visible = not self.visible
+        # Move randomly when visible
+        if self.visible:
+            self.x += random.choice([-1, 0, 1])
+            self.y += random.choice([-1, 0, 1])
+        # Call game_over_lose if this enemy hits the player
+        if self.visible and self.hits_player():
+            self.game.game_over_lose()
